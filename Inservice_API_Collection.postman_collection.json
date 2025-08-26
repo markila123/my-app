@@ -1,0 +1,709 @@
+{
+  "info": {
+    "name": "Inservice API Collection",
+    "description": "Complete API collection for Inservice Service Management App",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set base URL if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'https://testinvoice.inservice.ge/api');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://testinvoice.inservice.ge/api",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "123",
+      "type": "string"
+    },
+    {
+      "key": "repair_id",
+      "value": "643",
+      "type": "string"
+    },
+    {
+      "key": "service_id",
+      "value": "456",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Client Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@inservice.ge\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"companyCode\": \"TEST001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/clients/register",
+              "host": ["{{base_url}}"],
+              "path": ["app", "clients", "register"]
+            },
+            "description": "Register a new client account"
+          },
+          "response": []
+        },
+        {
+          "name": "Client Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@inservice.ge\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/login",
+              "host": ["{{base_url}}"],
+              "path": ["app", "login"]
+            },
+            "description": "Login with email and password to get JWT token"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-extract JWT token from response",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.token) {",
+                  "        pm.environment.set('jwt_token', responseJson.token);",
+                  "        console.log('JWT token saved to environment');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/logout",
+              "host": ["{{base_url}}"],
+              "path": ["app", "logout"]
+            },
+            "description": "Logout and invalidate JWT token"
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@inservice.ge\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/clients/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["app", "clients", "forgot-password"]
+            },
+            "description": "Send password reset email"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📋 Orders (რეაგირება)",
+      "item": [
+        {
+          "name": "Get All Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/responses",
+              "host": ["{{base_url}}"],
+              "path": ["app", "responses"]
+            },
+            "description": "Get list of all orders/responses (რეაგირება tab data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/responses/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["app", "responses", "{{order_id}}"]
+            },
+            "description": "Get detailed information for a specific order"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject_name\": \"Test Subject\",\n  \"content\": \"Order description\",\n  \"purchaser_id\": 1810,\n  \"urgent\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/responses",
+              "host": ["{{base_url}}"],
+              "path": ["app", "responses"]
+            },
+            "description": "Create a new order/response"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔧 Repairs (რემონტი)",
+      "item": [
+        {
+          "name": "Get All Repairs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/repairs",
+              "host": ["{{base_url}}"],
+              "path": ["app", "repairs"]
+            },
+            "description": "Get list of all repairs (რემონტი tab data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Repair by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/repairs/{{repair_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["app", "repairs", "{{repair_id}}"]
+            },
+            "description": "Get detailed repair information with nested structure and additional_data"
+          },
+          "response": [
+            {
+              "name": "Successful Repair Detail Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/app/repairs/643",
+                  "host": ["{{base_url}}"],
+                  "path": ["app", "repairs", "643"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"repair\": {\n    \"id\": 643,\n    \"content\": \"სატესტო სამუშაოს აღწერა\",\n    \"subject_name\": \"სატესტო სახელი\",\n    \"subject_address\": \"სატესტო მისამართი\",\n    \"status\": 1,\n    \"standby_mode\": 0,\n    \"created_at\": \"2025-08-17T11:18:46.000000Z\",\n    \"updated_at\": \"2025-08-17T11:18:46.000000Z\",\n    \"estimated_arrival_time\": \"2025-08-17T15:30:00.000000Z\",\n    \"time\": null,\n    \"act_note\": \"გამოსწორების მიზეზი\",\n    \"purchaser_id\": 1810,\n    \"performer_id\": null,\n    \"performer\": null,\n    \"purchaser\": {\n      \"id\": 1810,\n      \"name\": \"სატესტო კლიენტი\",\n      \"technical_time\": 130,\n      \"arrival_time\": null\n    },\n    \"user\": {\n      \"id\": 102,\n      \"name\": \"სატესტო კლიენტი\",\n      \"email\": \"test3@inservice.ge\"\n    }\n  },\n  \"additional_data\": {\n    \"last_service_date\": \"2025-07-08T11:12:56.000000Z\",\n    \"last_response_date\": \"2025-08-17T11:17:35.000000Z\",\n    \"last_response_content\": \"ბოლო რეაგირების შინაარსი\",\n    \"last_response_job_description\": \"სატესტო სამუშაოს აღწერა\",\n    \"response_creation_time\": \"2025-08-17T11:17:35.000000Z\",\n    \"chat_id\": null\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve Repair",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/repairs/{{repair_id}}/action",
+              "host": ["{{base_url}}"],
+              "path": ["app", "repairs", "{{repair_id}}", "action"]
+            },
+            "description": "Approve a repair request"
+          },
+          "response": []
+        },
+        {
+          "name": "Decline Repair",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"decline\",\n  \"reason\": \"მიზეზი უარყოფისა\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/repairs/{{repair_id}}/action",
+              "host": ["{{base_url}}"],
+              "path": ["app", "repairs", "{{repair_id}}", "action"]
+            },
+            "description": "Decline a repair request with reason"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Services (სერვისი)",
+      "item": [
+        {
+          "name": "Get All Services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/services",
+              "host": ["{{base_url}}"],
+              "path": ["app", "services"]
+            },
+            "description": "Get list of all services (სერვისი tab data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Service by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/services/{{service_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["app", "services", "{{service_id}}"]
+            },
+            "description": "Get detailed information for a specific service"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📚 History (ისტორია)",
+      "item": [
+        {
+          "name": "Get History - Responses Done",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/responses-done",
+              "host": ["{{base_url}}"],
+              "path": ["app", "responses-done"]
+            },
+            "description": "Get completed orders/repairs/services history (ისტორია tab data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get History - Repairs Done",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/repairs-done",
+              "host": ["{{base_url}}"],
+              "path": ["app", "repairs-done"]
+            },
+            "description": "Get completed repairs history"
+          },
+          "response": []
+        },
+        {
+          "name": "Get History - Services Done",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/services-done",
+              "host": ["{{base_url}}"],
+              "path": ["app", "services-done"]
+            },
+            "description": "Get completed services history"
+          },
+          "response": []
+        },
+        {
+          "name": "Get History with Filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/responses-done?type=repair&status=3&date_from=2025-01-01&date_to=2025-12-31",
+              "host": ["{{base_url}}"],
+              "path": ["app", "responses-done"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "repair",
+                  "description": "Filter by type: responses-done, repairs-done, services-done"
+                },
+                {
+                  "key": "status",
+                  "value": "3",
+                  "description": "Filter by status (3 = completed)"
+                },
+                {
+                  "key": "date_from",
+                  "value": "2025-01-01",
+                  "description": "Start date filter (YYYY-MM-DD)"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2025-12-31",
+                  "description": "End date filter (YYYY-MM-DD)"
+                }
+              ]
+            },
+            "description": "Get filtered history data"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 User Profile",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/app/profile",
+              "host": ["{{base_url}}"],
+              "path": ["app", "profile"]
+            },
+            "description": "Get current user profile information"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@inservice.ge\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/app/profile",
+              "host": ["{{base_url}}"],
+              "path": ["app", "profile"]
+            },
+            "description": "Update user profile information"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Statistics",
+      "item": [
+        {
+          "name": "Get Statistics (Branches)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/clients/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["clients", "statistics"]
+            },
+            "description": "Get branches statistics for order creation"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
