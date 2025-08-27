@@ -1,10 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  loadStatusMap,
+  mapStatusLabel as mapStatusLabelFromDict,
+  StatusMap,
+} from "../utils/StatusDictionary";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
+  FlatList,
+  RefreshControl,
   TouchableOpacity,
 } from "react-native";
 
@@ -22,6 +28,7 @@ const History: React.FC<HistoryProps> = ({
   onOpen,
 }) => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [lastJson, setLastJson] = useState<any>(null);
@@ -29,79 +36,81 @@ const History: React.FC<HistoryProps> = ({
   const [selectedTab, setSelectedTab] = useState<
     "orders" | "repairs" | "works"
   >("orders");
+  const [statusMap, setStatusMap] = useState<StatusMap>({});
+
+  const fetchHistory = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const year = new Date().getFullYear();
+      const params = new URLSearchParams();
+      // Done endpoints typically imply completed status already; keep only date filters
+      params.append("date_from", `${year}-01-01`);
+      params.append("date_to", `${year}-12-31`);
+
+      let url = `${baseUrl}/app/responses-done?${params.toString()}`;
+      if (selectedTab === "repairs") {
+        url = `${baseUrl}/app/repairs-done?${params.toString()}`;
+      } else if (selectedTab === "works") {
+        url = `${baseUrl}/app/services-done?${params.toString()}`;
+      }
+
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          Authorization: jwtToken ? `Bearer ${jwtToken}` : "",
+        },
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status} - ${txt}`);
+      }
+      const json = await res.json();
+      setLastJson(json);
+      let arr: any = [];
+      if (Array.isArray(json)) arr = json;
+      else
+        arr =
+          json?.responses ??
+          json?.repairs ??
+          json?.services ??
+          json?.items ??
+          json?.data ??
+          json ??
+          [];
+      if (!Array.isArray(arr)) {
+        if (json?.data && Array.isArray(json.data.items)) arr = json.data.items;
+        else if (json?.data && Array.isArray(json.data.responses))
+          arr = json.data.responses;
+        else if (json?.data && Array.isArray(json.data.repairs))
+          arr = json.data.repairs;
+        else arr = Object.values(arr || {});
+      }
+      setItems(arr as any[]);
+    } catch (err: any) {
+      setError(err.message || "Fetch failed");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [jwtToken, baseUrl, selectedTab]);
 
   useEffect(() => {
-    let mounted = true;
-    const fetchHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // build server-side filters based on selected tab
-        const year = new Date().getFullYear();
-        const params = new URLSearchParams();
-        // only completed items (status=3)
-        params.append("status", "3");
-        // restrict to current year by default
-        params.append("date_from", `${year}-01-01`);
-        params.append("date_to", `${year}-12-31`);
-
-        // choose endpoint per tab
-        let url = `${baseUrl}/app/responses-done?${params.toString()}`;
-        if (selectedTab === "repairs") {
-          url = `${baseUrl}/app/repairs-done?${params.toString()}`;
-        } else if (selectedTab === "works") {
-          url = `${baseUrl}/app/services-done?${params.toString()}`;
-        }
-
-        const res = await fetch(url, {
-          headers: {
-            Accept: "application/json",
-            Authorization: jwtToken ? `Bearer ${jwtToken}` : "",
-          },
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`HTTP ${res.status} - ${txt}`);
-        }
-        const json = await res.json();
-        if (mounted) setLastJson(json);
-        // try to normalize to array — handle several possible shapes
-        let arr: any = [];
-        if (Array.isArray(json)) arr = json;
-        else
-          arr =
-            json?.responses ??
-            json?.repairs ??
-            json?.services ??
-            json?.items ??
-            json?.data ??
-            json ??
-            [];
-
-        // if data is an object containing arrays under keys, prefer those
-        if (!Array.isArray(arr)) {
-          // try common nested places
-          if (json?.data && Array.isArray(json.data.items))
-            arr = json.data.items;
-          else if (json?.data && Array.isArray(json.data.responses))
-            arr = json.data.responses;
-          else if (json?.data && Array.isArray(json.data.repairs))
-            arr = json.data.repairs;
-          else arr = Object.values(arr || {});
-        }
-        if (mounted) setItems(arr as any[]);
-      } catch (err: any) {
-        if (mounted) setError(err.message || "Fetch failed");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
     fetchHistory();
-    return () => {
-      mounted = false;
-    };
-  }, [jwtToken, baseUrl, selectedTab]);
+  }, [fetchHistory]);
+
+  useEffect(() => {
+    (async () => {
+      const type =
+        selectedTab === "orders"
+          ? "responses"
+          : selectedTab === "repairs"
+          ? "repairs"
+          : "services";
+      const map = await loadStatusMap(baseUrl, jwtToken, type as any);
+      setStatusMap(map);
+    })();
+  }, [baseUrl, jwtToken, selectedTab]);
 
   const categorize = (it: any) => {
     const combined = [it.type, it.kind, it.response_type, it.category, it.name]
@@ -134,7 +143,7 @@ const History: React.FC<HistoryProps> = ({
       ? items
       : items.filter((i) => categorize(i) === "works");
 
-  if (loading)
+  if (loading && items.length === 0)
     return (
       <ActivityIndicator
         style={{ marginTop: 20 }}
@@ -142,12 +151,8 @@ const History: React.FC<HistoryProps> = ({
         color="#3B82F6"
       />
     );
-  if (error)
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: "#F97316" }}>დაფიქსირდა შეცდომა: {error}</Text>
-      </View>
-    );
+
+  const getStatusLabel = (val: any) => mapStatusLabelFromDict(statusMap, val);
 
   const renderCard = (item: any) => {
     const id = item?.id ?? item?.response_id ?? item?.repair_id ?? "-";
@@ -160,7 +165,7 @@ const History: React.FC<HistoryProps> = ({
       item?.time ??
       null;
     const date = rawDate ? new Date(rawDate).toLocaleString() : "—";
-    const status = item?.status ?? item?.state ?? "—";
+    const status = getStatusLabel(item);
 
     return (
       <TouchableOpacity
@@ -187,7 +192,7 @@ const History: React.FC<HistoryProps> = ({
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
+    <View style={{ flex: 1 }}>
       <View style={styles.tabsRow}>
         <TouchableOpacity
           style={[styles.tab, selectedTab === "orders" && styles.tabActive]}
@@ -230,61 +235,27 @@ const History: React.FC<HistoryProps> = ({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {selectedTab === "orders"
-            ? "შეკვეთები"
+      {error ? (
+        <View style={styles.center}>
+          <Text style={{ color: "#F97316" }}>დაფიქსირდა შეცდომა: {error}</Text>
+        </View>
+      ) : null}
+
+      <FlatList
+        data={
+          selectedTab === "orders"
+            ? orders
             : selectedTab === "repairs"
-            ? "რემონტი"
-            : "სამუშაოები"}
-        </Text>
-        {selectedTab === "orders" ? (
-          orders.length === 0 ? (
-            <View>
-              <Text style={styles.empty}>ჩანაწერები არაა</Text>
-              <TouchableOpacity
-                onPress={() => setShowRaw((s) => !s)}
-                style={{ marginTop: 8 }}
-              >
-                <Text style={{ color: "#3B82F6" }}>
-                  {showRaw ? "Hide raw response" : "Show raw response"}
-                </Text>
-              </TouchableOpacity>
-              {showRaw && (
-                <View style={{ marginTop: 8 }}>
-                  <Text style={{ color: "#94A3B8", fontSize: 12 }}>
-                    {JSON.stringify(lastJson, null, 2)}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            orders.map(renderCard)
-          )
-        ) : selectedTab === "repairs" ? (
-          repairs.length === 0 ? (
-            <View>
-              <Text style={styles.empty}>ჩანაწერები არაა</Text>
-              <TouchableOpacity
-                onPress={() => setShowRaw((s) => !s)}
-                style={{ marginTop: 8 }}
-              >
-                <Text style={{ color: "#3B82F6" }}>
-                  {showRaw ? "Hide raw response" : "Show raw response"}
-                </Text>
-              </TouchableOpacity>
-              {showRaw && (
-                <View style={{ marginTop: 8 }}>
-                  <Text style={{ color: "#94A3B8", fontSize: 12 }}>
-                    {JSON.stringify(lastJson, null, 2)}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            repairs.map(renderCard)
-          )
-        ) : works.length === 0 ? (
+            ? repairs
+            : works
+        }
+        keyExtractor={(i) =>
+          String(i?.id ?? i?.response_id ?? i?.repair_id ?? Math.random())
+        }
+        renderItem={({ item }) => renderCard(item)}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        contentContainerStyle={{ padding: 12 }}
+        ListEmptyComponent={
           <View>
             <Text style={styles.empty}>ჩანაწერები არაა</Text>
             <TouchableOpacity
@@ -303,24 +274,25 @@ const History: React.FC<HistoryProps> = ({
               </View>
             )}
           </View>
-        ) : (
-          works.map(renderCard)
-        )}
-      </View>
-    </ScrollView>
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchHistory();
+            }}
+            colors={["#3B82F6"]}
+          />
+        }
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center", padding: 20 },
-  section: {
-    backgroundColor: "#082033",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#163147",
-    marginBottom: 12,
-  },
+  section: {},
   tabsRow: {
     flexDirection: "row",
     backgroundColor: "#0F1724",
@@ -347,12 +319,11 @@ const styles = StyleSheet.create({
   },
   empty: { color: "#94A3B8" },
   card: {
-    backgroundColor: "#062032",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: "#082033",
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#123245",
+    borderColor: "#163147",
   },
   cardTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
   cardSubtitle: { color: "#94A3B8", marginTop: 6 },

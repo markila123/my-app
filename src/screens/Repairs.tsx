@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
+  loadStatusMap,
+  mapStatusLabel as mapStatusLabelFromDict,
+  StatusMap,
+} from "../utils/StatusDictionary";
+import {
   View,
   Text,
   StyleSheet,
@@ -14,7 +19,9 @@ export type RepairItem = {
   subject_name?: string;
   subject_address?: string;
   content?: string;
-  status?: number;
+  status?: any;
+  status_text?: string;
+  status_label?: string;
   created_at?: string;
 };
 
@@ -26,17 +33,16 @@ type RepairsProps = {
 
 const BASE_URL_DEFAULT = "https://testinvoice.inservice.ge/api";
 
-const mapStatusLabel = (status?: number) => {
-  switch (status) {
-    case 1:
-      return "ელოდება დადასტურებას";
-    case 2:
-      return "გადაეცემა შემსრულებელს";
-    case 3:
-      return "დასრულებული";
-    default:
-      return "სტატუსი უცნობია";
-  }
+const getStatusLabel = (item: RepairItem) => {
+  const s = item?.status;
+  if (typeof s === "string") return s;
+  if (s && typeof s === "object")
+    return s.name ?? s.label ?? s.title ?? s.text ?? String(s.id ?? "");
+  return (
+    item.status_text ||
+    item.status_label ||
+    (s != null ? String(s) : "სტატუსი უცნობია")
+  );
 };
 
 const Repairs: React.FC<RepairsProps> = ({
@@ -48,6 +54,7 @@ const Repairs: React.FC<RepairsProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [repairs, setRepairs] = useState<RepairItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [statusMap, setStatusMap] = useState<StatusMap>({});
 
   const fetchRepairs = useCallback(async () => {
     setError(null);
@@ -89,6 +96,13 @@ const Repairs: React.FC<RepairsProps> = ({
     fetchRepairs();
   }, [fetchRepairs]);
 
+  useEffect(() => {
+    (async () => {
+      const map = await loadStatusMap(baseUrl, jwtToken, "repairs");
+      setStatusMap(map);
+    })();
+  }, [baseUrl, jwtToken]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchRepairs();
@@ -102,7 +116,8 @@ const Repairs: React.FC<RepairsProps> = ({
             <Text style={styles.cardId}>#{item.id}</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>
-                {mapStatusLabel(item.status)}
+                {mapStatusLabelFromDict(statusMap, item) ||
+                  getStatusLabel(item)}
               </Text>
             </View>
           </View>

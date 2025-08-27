@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
+  loadStatusMap,
+  mapStatusLabel as mapStatusLabelFromDict,
+  StatusMap,
+} from "../utils/StatusDictionary";
+import {
   View,
   Text,
   StyleSheet,
@@ -13,7 +18,10 @@ export type OrderItem = {
   id: number;
   subject_name?: string;
   content?: string;
-  status?: number;
+  // status can be number or object/string depending on API
+  status?: any;
+  status_text?: string;
+  status_label?: string;
   created_at?: string;
 };
 
@@ -25,17 +33,16 @@ type OrdersProps = {
 
 const BASE_URL_DEFAULT = "https://testinvoice.inservice.ge/api";
 
-const mapStatusLabel = (status?: number) => {
-  switch (status) {
-    case 1:
-      return "ელოდება დადასტურებას";
-    case 2:
-      return "გამოსწორება მიმდინარეობს";
-    case 3:
-      return "დასრულებული";
-    default:
-      return "სტატუსი უცნობია";
-  }
+const getStatusLabel = (item: OrderItem) => {
+  const s = item?.status;
+  if (typeof s === "string") return s;
+  if (s && typeof s === "object")
+    return s.name ?? s.label ?? s.title ?? s.text ?? String(s.id ?? "");
+  return (
+    item.status_text ||
+    item.status_label ||
+    (s != null ? String(s) : "სტატუსი უცნობია")
+  );
 };
 
 const Orders: React.FC<OrdersProps> = ({
@@ -47,6 +54,7 @@ const Orders: React.FC<OrdersProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [statusMap, setStatusMap] = useState<StatusMap>({});
 
   const fetchOrders = useCallback(async () => {
     setError(null);
@@ -88,6 +96,13 @@ const Orders: React.FC<OrdersProps> = ({
     fetchOrders();
   }, [fetchOrders]);
 
+  useEffect(() => {
+    (async () => {
+      const map = await loadStatusMap(baseUrl, jwtToken, "responses");
+      setStatusMap(map);
+    })();
+  }, [baseUrl, jwtToken]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchOrders();
@@ -101,7 +116,8 @@ const Orders: React.FC<OrdersProps> = ({
             <Text style={styles.cardId}>#{item.id}</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>
-                {mapStatusLabel(item.status)}
+                {mapStatusLabelFromDict(statusMap, item) ||
+                  getStatusLabel(item)}
               </Text>
             </View>
           </View>

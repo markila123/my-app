@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   StyleSheet,
@@ -17,6 +17,15 @@ import Orders from "./src/screens/Orders";
 import OrderDetails from "./src/screens/OrderDetails";
 import Services from "./src/screens/Services";
 import History from "./src/screens/History";
+import AuthLogin from "./src/screens/AuthLogin";
+import AuthRegister from "./src/screens/AuthRegister";
+import ForgotPassword from "./src/screens/ForgotPassword";
+import {
+  STORAGE_KEYS,
+  storageGet,
+  storageRemove,
+} from "./src/utils/LocalStorage";
+import AccountModal from "./src/components/AccountModal";
 
 export default function App() {
   const [mode, setMode] = useState<"contract" | "noncontract">("contract");
@@ -28,8 +37,26 @@ export default function App() {
     null
   );
 
-  // Add a default JWT for testing (replace with secure storage/login flow later)
-  const DEFAULT_JWT = "1340|rePvz6npySodPwzHApO1QQGnnYRbpW9xxyqGcIlL";
+  // Auth state
+  const [token, setToken] = useState<string | null>(null);
+  const [authScreen, setAuthScreen] = useState<"login" | "register" | "forgot">(
+    "login"
+  );
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [knownEmail, setKnownEmail] = useState<string>("");
+
+  // Restore saved auth on mount
+  useEffect(() => {
+    (async () => {
+      const t = await storageGet(STORAGE_KEYS.token);
+      const e = (await storageGet(STORAGE_KEYS.email)) || "";
+      const n = await storageGet(STORAGE_KEYS.name);
+      if (t) setToken(t);
+      if (e) setKnownEmail(e);
+      if (n) setProfileName(n);
+    })();
+  }, []);
 
   // contract inputs
   const [branch, setBranch] = useState("");
@@ -70,12 +97,80 @@ export default function App() {
     istoria: "ისტორია",
   };
 
+  // If no token, show auth flow immediately
+  if (!token) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {authScreen === "login" ? (
+          <AuthLogin
+            onLoggedIn={(t, e) => {
+              setToken(t);
+              if (e) setKnownEmail(e);
+              // best-effort update of name from storage (set by login screen if provided)
+              (async () => {
+                const n = await storageGet(STORAGE_KEYS.name);
+                if (n) setProfileName(n);
+              })();
+            }}
+            onNavigateRegister={() => setAuthScreen("register")}
+            onNavigateForgot={() => setAuthScreen("forgot")}
+            defaultEmail={knownEmail}
+          />
+        ) : authScreen === "register" ? (
+          <AuthRegister
+            onRegistered={(t, e) => {
+              if (t) setToken(t);
+              if (e) setKnownEmail(e);
+              // if no token returned, navigate to login with email filled
+              if (!t) setAuthScreen("login");
+              (async () => {
+                const n = await storageGet(STORAGE_KEYS.name);
+                if (n) setProfileName(n);
+              })();
+            }}
+            onNavigateLogin={() => setAuthScreen("login")}
+          />
+        ) : (
+          <ForgotPassword
+            onBackToLogin={() => setAuthScreen("login")}
+            defaultEmail={knownEmail}
+          />
+        )}
+        <StatusBar style="auto" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topSpacer} />
 
       <View style={styles.form}>
-        <Text style={styles.title}>შეკვეთის შექმნა</Text>
+        {/* Header: centered title with account icon on the right */}
+        <View style={styles.headerRow}>
+          <View style={{ width: 36 }} />
+          <Text
+            style={[
+              styles.title,
+              { flex: 1, textAlign: "center", marginBottom: 0 },
+            ]}
+          >
+            შეკვეთის შექმნა
+          </Text>
+          <TouchableOpacity
+            onPress={() => setAccountOpen(true)}
+            activeOpacity={0.85}
+            style={{ width: 36, alignItems: "flex-end" }}
+          >
+            <View style={styles.avatar}>
+              <Text style={{ color: "#fff", fontWeight: "800" }}>
+                {(profileName?.[0] || knownEmail?.[0] || "👤")
+                  .toString()
+                  .toUpperCase()}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {activeTab === "rea" ? (
           <>
@@ -173,12 +268,12 @@ export default function App() {
           openRepairId ? (
             <RepairDetails
               id={openRepairId}
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onClose={() => setOpenRepairId(null)}
             />
           ) : (
             <Repairs
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onOpen={(id) => setOpenRepairId(id)}
             />
           )
@@ -186,12 +281,12 @@ export default function App() {
           openOrderId ? (
             <OrderDetails
               id={openOrderId}
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onClose={() => setOpenOrderId(null)}
             />
           ) : (
             <Orders
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onOpen={(id) => setOpenOrderId(id)}
             />
           )
@@ -199,12 +294,12 @@ export default function App() {
           openServiceId ? (
             <OrderDetails
               id={openServiceId}
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onClose={() => setOpenServiceId(null)}
             />
           ) : (
             <Services
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onOpen={(id) => setOpenServiceId(id)}
             />
           )
@@ -212,12 +307,12 @@ export default function App() {
           openHistoryOrderId ? (
             <OrderDetails
               id={openHistoryOrderId}
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onClose={() => setOpenHistoryOrderId(null)}
             />
           ) : (
             <History
-              jwtToken={DEFAULT_JWT}
+              jwtToken={token || undefined}
               onOpen={(id) => setOpenHistoryOrderId(id)}
             />
           )
@@ -234,6 +329,19 @@ export default function App() {
 
       <BottomNav active={activeTab} onSelect={(t) => setActiveTab(t)} />
 
+      <AccountModal
+        visible={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        token={token}
+        onLogout={async () => {
+          setAccountOpen(false);
+          setToken(null);
+          await storageRemove(STORAGE_KEYS.token);
+          await storageRemove(STORAGE_KEYS.email);
+          await storageRemove(STORAGE_KEYS.name);
+        }}
+      />
+
       <StatusBar style="auto" />
     </SafeAreaView>
   );
@@ -247,6 +355,21 @@ const styles = StyleSheet.create({
   topSpacer: {
     height: 36,
   },
+  topBar: {
+    height: 48,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#3B82F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   form: {
     padding: 20,
     flex: 1,
@@ -256,6 +379,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 30,
     fontWeight: "800",
+    marginBottom: 12,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   placeholder: {

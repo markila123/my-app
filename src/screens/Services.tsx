@@ -1,10 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  loadStatusMap,
+  mapStatusLabel as mapStatusLabelFromDict,
+  StatusMap,
+} from "../utils/StatusDictionary";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
+  FlatList,
+  RefreshControl,
   TouchableOpacity,
 } from "react-native";
 
@@ -21,58 +27,56 @@ const Services: React.FC<ServicesProps> = ({
   baseUrl = BASE_URL_DEFAULT,
   onOpen,
 }) => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<any[]>([]);
+  const [statusMap, setStatusMap] = useState<StatusMap>({});
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchServices = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${baseUrl}/app/services`, {
-          headers: {
-            Accept: "application/json",
-            Authorization: jwtToken ? `Bearer ${jwtToken}` : "",
-          },
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`HTTP ${res.status} - ${txt}`);
-        }
-        const json = await res.json();
-        // normalize array
-        let arr: any = [];
-        if (Array.isArray(json)) arr = json;
-        else arr = json?.services ?? json?.data ?? json?.items ?? json ?? [];
-        if (!Array.isArray(arr)) arr = Object.values(arr || {});
-        if (mounted) setItems(arr as any[]);
-      } catch (err: any) {
-        if (mounted) setError(err.message || "Fetch failed");
-      } finally {
-        if (mounted) setLoading(false);
+  const fetchServices = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/app/services`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: jwtToken ? `Bearer ${jwtToken}` : "",
+        },
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status} - ${txt}`);
       }
-    };
-
-    fetchServices();
-    return () => {
-      mounted = false;
-    };
+      const json = await res.json();
+      // normalize array
+      let arr: any = [];
+      if (Array.isArray(json)) arr = json;
+      else arr = json?.services ?? json?.data ?? json?.items ?? json ?? [];
+      if (!Array.isArray(arr)) arr = Object.values(arr || {});
+      setItems(arr as any[]);
+    } catch (err: any) {
+      setError(err.message || "Fetch failed");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [jwtToken, baseUrl]);
 
-  if (loading)
-    return (
-      <ActivityIndicator
-        style={{ marginTop: 20 }}
-        size="large"
-        color="#3B82F6"
-      />
-    );
-  if (error)
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+
+  useEffect(() => {
+    (async () => {
+      const map = await loadStatusMap(baseUrl, jwtToken, "services");
+      setStatusMap(map);
+    })();
+  }, [baseUrl, jwtToken]);
+
+  if (loading && items.length === 0)
     return (
       <View style={styles.center}>
-        <Text style={{ color: "#F97316" }}>დაფიქსირდა შეცდომა: {error}</Text>
+        <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );
 
@@ -80,7 +84,10 @@ const Services: React.FC<ServicesProps> = ({
     const id = item?.id ?? item?.service_id ?? "-";
     const title = item?.title ?? item?.name ?? item?.subject_name ?? "—";
     const date = item?.created_at ?? item?.date ?? item?.time ?? "—";
-    const status = item?.status ?? item?.state ?? "—";
+    const statusRaw = item?.status ?? item?.state ?? "—";
+    const status =
+      mapStatusLabelFromDict(statusMap, { status: statusRaw }) ||
+      (typeof statusRaw === "number" ? String(statusRaw) : statusRaw);
 
     return (
       <TouchableOpacity
@@ -107,35 +114,38 @@ const Services: React.FC<ServicesProps> = ({
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>გეგმიური</Text>
-        {items.length === 0 ? (
-          <Text style={styles.empty}>ჩანაწერები არაა</Text>
-        ) : (
-          items.map(renderCard)
-        )}
-      </View>
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      {error ? (
+        <View style={styles.center}>
+          <Text style={{ color: "#F97316" }}>დაფიქსირდა შეცდომა: {error}</Text>
+        </View>
+      ) : null}
+      <FlatList
+        data={items}
+        keyExtractor={(i) => String(i?.id ?? i?.service_id ?? Math.random())}
+        renderItem={({ item }) => renderCard(item)}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        contentContainerStyle={{ padding: 12 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchServices();
+            }}
+            colors={["#3B82F6"]}
+          />
+        }
+        ListEmptyComponent={<Text style={styles.empty}>ჩანაწერები არაა</Text>}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center", padding: 20 },
-  section: {
-    backgroundColor: "#082033",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#163147",
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    color: "#E6EEF8",
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
+  section: {},
+  sectionTitle: { color: "#E6EEF8" },
   empty: { color: "#94A3B8" },
   card: {
     backgroundColor: "#062032",
