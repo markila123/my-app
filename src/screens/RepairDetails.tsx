@@ -63,15 +63,15 @@ const RepairDetails: React.FC<RepairDetailsProps> = ({
       <ActivityIndicator
         style={{ marginTop: 20 }}
         size="large"
-        color="#3B82F6"
+        color="#ec4899"
       />
     );
   if (error)
     return (
       <View style={styles.center}>
-        <Text style={{ color: "#F97316" }}>დაფიქსირდა შეცდომა: {error}</Text>
+        <Text style={{ color: "#b91c1c" }}>დაფიქსირდა შეცდომა: {error}</Text>
         <TouchableOpacity onPress={onClose} style={{ marginTop: 12 }}>
-          <Text style={{ color: "#3B82F6" }}>უკან</Text>
+          <Text style={{ color: "#ec4899" }}>უკან</Text>
         </TouchableOpacity>
       </View>
     );
@@ -103,10 +103,6 @@ const RepairDetails: React.FC<RepairDetailsProps> = ({
 
   return (
     <ScrollView contentContainerStyle={{ padding: 12 }}>
-      <TouchableOpacity onPress={onClose} style={{ marginBottom: 12 }}>
-        <Text style={{ color: "#fff" }}>{"< წინა"}</Text>
-      </TouchableOpacity>
-
       {/* რეაგირების დეტალები */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>რეაგირების დეტალები</Text>
@@ -196,16 +192,33 @@ const RepairDetails: React.FC<RepairDetailsProps> = ({
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>მოქმედებები</Text>
         <TouchableOpacity
-          style={[styles.action, { backgroundColor: "#10B981" }]}
+          style={[
+            styles.action,
+            {
+              backgroundColor: "#ec4899",
+            },
+          ]}
           activeOpacity={0.85}
         >
-          <Text style={styles.actionText}>✓ რეაგირების დადასტურება</Text>
+          <Text style={[styles.actionText, { color: "#ffffff" }]}>
+            ✓ რეაგირების დადასტურება
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.action, { backgroundColor: "#EF4444", marginTop: 12 }]}
+          style={[
+            styles.action,
+            {
+              backgroundColor: "#fde2e9",
+              borderColor: "#ec4899",
+              borderWidth: 1,
+              marginTop: 12,
+            },
+          ]}
           activeOpacity={0.85}
         >
-          <Text style={styles.actionText}>✕ რეაგირების უარყოფა</Text>
+          <Text style={[styles.actionText, { color: "#ec4899" }]}>
+            ✕ რეაგირების უარყოფა
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -215,29 +228,29 @@ const RepairDetails: React.FC<RepairDetailsProps> = ({
 const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center", padding: 20 },
   section: {
-    backgroundColor: "#082033",
+    backgroundColor: "#fde2e9",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#163147",
+    borderColor: "#f9a8d4",
     marginBottom: 12,
   },
   sectionTitle: {
-    color: "#E6EEF8",
+    color: "#111827",
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 12,
   },
-  row: { borderTopWidth: 1, borderTopColor: "#123245", paddingTop: 12 },
-  rowLabel: { color: "#94A3B8", marginBottom: 6 },
-  rowValue: { color: "#fff", fontSize: 16 },
+  row: { borderTopWidth: 1, borderTopColor: "#f9a8d4", paddingTop: 12 },
+  rowLabel: { color: "#6b7280", marginBottom: 6 },
+  rowValue: { color: "#111827", fontSize: 16 },
   action: {
     padding: 14,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-  actionText: { color: "#fff", fontWeight: "700" },
+  actionText: { color: "#ffffff", fontWeight: "700" },
 });
 
 export default RepairDetails;

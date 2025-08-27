@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Text,
   Alert,
+  TextInput,
 } from "react-native";
 import AppButton from "./src/components/AppButton";
 import AppInput from "./src/components/AppInput";
@@ -45,6 +46,7 @@ export default function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [knownEmail, setKnownEmail] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Restore saved auth on mount
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function App() {
   };
 
   const tabLabels: Record<TabKey, string> = {
-    rea1: "რეაგირება1",
+    rea1: "რეაგირება",
     remont: "რემონტი",
     rea: "რეაგირება",
     ghegmiri: "გეგმიური",
@@ -145,18 +147,59 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <View style={styles.topSpacer} />
 
-      <View style={styles.form}>
-        {/* Header: centered title with account icon on the right */}
+      {/* App Header: light pink background with bottom pink border */}
+      <View style={styles.header}>
         <View style={styles.headerRow}>
-          <View style={{ width: 36 }} />
-          <Text
-            style={[
-              styles.title,
-              { flex: 1, textAlign: "center", marginBottom: 0 },
-            ]}
-          >
-            შეკვეთის შექმნა
-          </Text>
+          {openRepairId !== null ||
+          openOrderId !== null ||
+          openServiceId !== null ||
+          openHistoryOrderId !== null ? (
+            <TouchableOpacity
+              onPress={() => {
+                if (openRepairId !== null) setOpenRepairId(null);
+                else if (openOrderId !== null) setOpenOrderId(null);
+                else if (openServiceId !== null) setOpenServiceId(null);
+                else if (openHistoryOrderId !== null)
+                  setOpenHistoryOrderId(null);
+              }}
+              activeOpacity={0.85}
+              style={{ width: 36, alignItems: "flex-start" }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={{ color: "#111827", fontSize: 24 }}>{"<"}</Text>
+            </TouchableOpacity>
+          ) : activeTab === "rea" ? (
+            <View style={{ width: 36 }} />
+          ) : (
+            <View style={{ width: 0 }} />
+          )}
+
+          {activeTab === "rea" ? (
+            <Text
+              style={[
+                styles.title,
+                { flex: 1, textAlign: "center", marginBottom: 0 },
+              ]}
+            >
+              შეკვეთის შექმნა
+            </Text>
+          ) : openRepairId === null &&
+            openOrderId === null &&
+            openServiceId === null &&
+            openHistoryOrderId === null ? (
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="ძებნა..."
+                placeholderTextColor="#9ca3af"
+                style={styles.headerSearch}
+              />
+            </View>
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
+
           <TouchableOpacity
             onPress={() => setAccountOpen(true)}
             activeOpacity={0.85}
@@ -171,7 +214,9 @@ export default function App() {
             </View>
           </TouchableOpacity>
         </View>
+      </View>
 
+      <View style={styles.form}>
         {activeTab === "rea" ? (
           <>
             <View style={styles.tabsRow}>
@@ -350,7 +395,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F1724",
+    backgroundColor: "#ffffff",
   },
   topSpacer: {
     height: 36,
@@ -362,11 +407,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  header: {
+    backgroundColor: "#ffffffff", // light light pink
+    borderBottomColor: "#ffb9e0ff", // pink border on bottom
+    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 11,
+    paddingBottom: 15,
+  },
   avatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#ec4899",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -376,7 +429,7 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: "center",
-    color: "#fff",
+    color: "#111827",
     fontSize: 30,
     fontWeight: "800",
     marginBottom: 12,
@@ -385,7 +438,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
   },
   placeholder: {
     flex: 1,
@@ -403,7 +455,7 @@ const styles = StyleSheet.create({
   },
   tabsRow: {
     flexDirection: "row",
-    backgroundColor: "#1f2937",
+    backgroundColor: "#fde2e9",
     borderRadius: 14,
     padding: 6,
     marginBottom: 16,
@@ -416,7 +468,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   tabActive: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#ec4899",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12,
@@ -424,11 +476,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tabText: {
-    color: "#94A3B8",
+    color: "#374151",
     fontSize: 16,
     fontWeight: "700",
   },
   tabTextActive: {
-    color: "#fff",
+    color: "#ffffff",
+  },
+  headerSearch: {
+    height: 40,
+    backgroundColor: "#fde2e9",
+    borderColor: "#f9a8d4",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    color: "#111827",
   },
 });

@@ -75,13 +75,33 @@ const ForgotPassword: React.FC<Props> = ({
         />
 
         {message ? (
-          <View style={[styles.infoBox, { backgroundColor: "#065f46" }]}>
-            <Text style={styles.infoText}>{message}</Text>
+          <View
+            style={[
+              styles.infoBox,
+              {
+                backgroundColor: "#d1fae5",
+                borderColor: "#10b981",
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[styles.infoText, { color: "#065f46" }]}>
+              {message}
+            </Text>
           </View>
         ) : null}
         {error ? (
-          <View style={[styles.infoBox, { backgroundColor: "#EF4444" }]}>
-            <Text style={styles.infoText}>{error}</Text>
+          <View
+            style={[
+              styles.infoBox,
+              {
+                backgroundColor: "#fee2e2",
+                borderColor: "#ef4444",
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text style={[styles.infoText, { color: "#991b1b" }]}>{error}</Text>
           </View>
         ) : null}
 
@@ -105,22 +125,24 @@ const ForgotPassword: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F1724", padding: 20 },
+  container: { flex: 1, backgroundColor: "#ffffff", padding: 20 },
   card: {
     marginTop: 70,
-    backgroundColor: "#0B2036",
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: "#f9a8d4",
   },
   title: {
-    color: "#fff",
+    color: "#111827",
     fontSize: 28,
     fontWeight: "800",
     textAlign: "center",
   },
-  subtitle: { color: "#60A5FA", textAlign: "center", marginTop: 8 },
+  subtitle: { color: "#ec4899", textAlign: "center", marginTop: 8 },
   infoBox: { padding: 12, borderRadius: 10, marginTop: 12 },
-  infoText: { color: "#fff" },
+  infoText: { color: "#111827" },
 });
 
 export default ForgotPassword;

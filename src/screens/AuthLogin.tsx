@@ -128,23 +128,25 @@ const AuthLogin: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F1724", padding: 20 },
+  container: { flex: 1, backgroundColor: "#ffffff", padding: 20 },
   card: {
     marginTop: 70,
-    backgroundColor: "#0B2036",
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 20,
+    borderWidth: 1,
+    borderColor: "#f9a8d4",
   },
   title: {
-    color: "#fff",
+    color: "#111827",
     fontSize: 32,
     fontWeight: "800",
     textAlign: "center",
   },
-  subtitle: { color: "#60A5FA", textAlign: "center", marginTop: 8 },
+  subtitle: { color: "#ec4899", textAlign: "center", marginTop: 8 },
+  link: { color: "#ec4899", marginLeft: 6 },
   bottomRow: { flexDirection: "row", justifyContent: "center", marginTop: 16 },
-  bottomText: { color: "#9AA9B8" },
-  link: { color: "#60A5FA", marginLeft: 6 },
+  bottomText: { color: "#6b7280" },
   errorBox: {
     backgroundColor: "#EF4444",
     padding: 12,

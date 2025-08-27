@@ -31,7 +31,7 @@ const AppInput: React.FC<AppInputProps> = ({
       <TextInput
         {...rest}
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor="#9ca3af"
         style={[
           styles.input,
           focused && styles.inputFocused,
@@ -53,20 +53,20 @@ const AppInput: React.FC<AppInputProps> = ({
 
 const styles = StyleSheet.create({
   label: {
-    color: "#E6EEF8",
+    color: "#374151",
     fontWeight: "700",
     marginBottom: 8,
     fontSize: 16,
   },
   input: {
     minHeight: 52,
-    backgroundColor: "#243343",
+    backgroundColor: "#fde2e9", // light pink
     borderRadius: 12,
     paddingHorizontal: 14,
-    color: "#E6EEF8",
+    color: "#111827",
     fontSize: 16,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#f9a8d4",
   },
   inputMultiline: {
     minHeight: 120,
@@ -74,10 +74,10 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   inputFocused: {
-    borderColor: "#3B82F6",
+    borderColor: "#ec4899",
   },
   error: {
-    color: "#F97316",
+    color: "#b91c1c",
     marginTop: 6,
   },
 });

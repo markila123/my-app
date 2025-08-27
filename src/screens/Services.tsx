@@ -12,12 +12,14 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 
 type ServicesProps = {
   jwtToken?: string;
   baseUrl?: string;
   onOpen?: (id: number) => void;
+  query?: string;
 };
 
 const BASE_URL_DEFAULT = "https://testinvoice.inservice.ge/api";
@@ -26,12 +28,14 @@ const Services: React.FC<ServicesProps> = ({
   jwtToken = "",
   baseUrl = BASE_URL_DEFAULT,
   onOpen,
+  query = "",
 }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [statusMap, setStatusMap] = useState<StatusMap>({});
+  // query comes from App header
 
   const fetchServices = useCallback(async () => {
     setError(null);
@@ -76,14 +80,13 @@ const Services: React.FC<ServicesProps> = ({
   if (loading && items.length === 0)
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#ec4899" />
       </View>
     );
 
   const renderCard = (item: any) => {
     const id = item?.id ?? item?.service_id ?? "-";
     const title = item?.title ?? item?.name ?? item?.subject_name ?? "—";
-    const date = item?.created_at ?? item?.date ?? item?.time ?? "—";
     const statusRaw = item?.status ?? item?.state ?? "—";
     const status =
       mapStatusLabelFromDict(statusMap, { status: statusRaw }) ||
@@ -105,13 +108,21 @@ const Services: React.FC<ServicesProps> = ({
 
         <Text style={styles.cardSubtitle}>{title}</Text>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaIcon}>📅</Text>
-          <Text style={styles.metaText}>{date}</Text>
-        </View>
+        {/* removed calendar row as requested */}
       </TouchableOpacity>
     );
   };
+
+  const q = (query || "").trim().toLowerCase();
+  const filtered = q
+    ? items.filter((o) =>
+        [o.title, o.name, o.subject_name, o.status, o.state, String(o.id)]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      )
+    : items;
 
   return (
     <View style={{ flex: 1 }}>
@@ -121,11 +132,12 @@ const Services: React.FC<ServicesProps> = ({
         </View>
       ) : null}
       <FlatList
-        data={items}
+        data={filtered}
         keyExtractor={(i) => String(i?.id ?? i?.service_id ?? Math.random())}
         renderItem={({ item }) => renderCard(item)}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={{ padding: 12 }}
+        ListHeaderComponent={<View style={{ height: 0 }} />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -133,7 +145,7 @@ const Services: React.FC<ServicesProps> = ({
               setRefreshing(true);
               fetchServices();
             }}
-            colors={["#3B82F6"]}
+            colors={["#ec4899"]}
           />
         }
         ListEmptyComponent={<Text style={styles.empty}>ჩანაწერები არაა</Text>}
@@ -146,28 +158,27 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center", padding: 20 },
   section: {},
   sectionTitle: { color: "#E6EEF8" },
-  empty: { color: "#94A3B8" },
+  empty: { color: "#6b7280" },
   card: {
-    backgroundColor: "#062032",
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: "#fde2e9",
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#123245",
+    borderColor: "#f9a8d4",
   },
-  cardTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  cardSubtitle: { color: "#94A3B8", marginTop: 6 },
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  metaIcon: { marginRight: 8, color: "#94A3B8" },
-  metaText: { color: "#94A3B8" },
+  cardTitle: { color: "#111827", fontWeight: "700", fontSize: 16 },
+  cardSubtitle: { color: "#6b7280", marginTop: 6 },
+  // meta row removed
   statusPill: {
-    backgroundColor: "#0F766E",
+    backgroundColor: "#ec4899",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     alignSelf: "flex-start",
   },
-  statusText: { color: "#E6FFF7", fontWeight: "700" },
+  statusText: { color: "#ffffff", fontWeight: "700" },
+  // search input moved to App header
 });
 
 export default Services;

@@ -36,13 +36,7 @@ const AccountModal: React.FC<Props> = ({
     if (!visible) return;
     let mounted = true;
 
-    const endpoints = [
-      `${baseUrl}/app/Clients/me`,
-      `${baseUrl}/app/clients/me`,
-      `${baseUrl}/app/me`,
-      `${baseUrl}/app/user`,
-      `${baseUrl}/app/profile`,
-    ];
+    const endpoints = [`${baseUrl}/clients/me`];
 
     const run = async () => {
       setLoading(true);
@@ -187,24 +181,24 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: "#0B2036",
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 20,
     width: "100%",
     borderWidth: 1,
-    borderColor: "#163147",
+    borderColor: "#f9a8d4",
   },
   closeBtn: { position: "absolute", top: 12, right: 12, padding: 8 },
   title: {
-    color: "#fff",
+    color: "#111827",
     fontSize: 22,
     fontWeight: "800",
     textAlign: "center",
     marginBottom: 12,
   },
-  row: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#123245" },
-  rowLabel: { color: "#94A3B8", marginBottom: 4 },
-  rowValue: { color: "#fff", fontSize: 16 },
+  row: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#f9a8d4" },
+  rowLabel: { color: "#6b7280", marginBottom: 4 },
+  rowValue: { color: "#111827", fontSize: 16 },
 });
 
 export default AccountModal;

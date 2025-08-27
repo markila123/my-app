@@ -58,10 +58,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   primary: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#ec4899", // pink
   },
   secondary: {
-    backgroundColor: "#334155",
+    backgroundColor: "#f9a8d4", // light pink
   },
   disabled: {
     opacity: 0.5,

@@ -12,12 +12,14 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 
 type HistoryProps = {
   jwtToken?: string;
   baseUrl?: string;
   onOpen?: (id: number) => void;
+  query?: string;
 };
 
 const BASE_URL_DEFAULT = "https://testinvoice.inservice.ge/api";
@@ -26,6 +28,7 @@ const History: React.FC<HistoryProps> = ({
   jwtToken = "",
   baseUrl = BASE_URL_DEFAULT,
   onOpen,
+  query = "",
 }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,6 +40,7 @@ const History: React.FC<HistoryProps> = ({
     "orders" | "repairs" | "works"
   >("orders");
   const [statusMap, setStatusMap] = useState<StatusMap>({});
+  // query comes from App header
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -148,7 +152,7 @@ const History: React.FC<HistoryProps> = ({
       <ActivityIndicator
         style={{ marginTop: 20 }}
         size="large"
-        color="#3B82F6"
+        color="#ec4899"
       />
     );
 
@@ -158,13 +162,7 @@ const History: React.FC<HistoryProps> = ({
     const id = item?.id ?? item?.response_id ?? item?.repair_id ?? "-";
     const title =
       item?.purchaser?.name ?? item?.subject_name ?? item?.title ?? "—";
-    const rawDate =
-      item?.created_at ??
-      item?.additional_data?.response_creation_time ??
-      item?.date ??
-      item?.time ??
-      null;
-    const date = rawDate ? new Date(rawDate).toLocaleString() : "—";
+    // date removed from UI, no need to compute
     const status = getStatusLabel(item);
 
     return (
@@ -183,13 +181,34 @@ const History: React.FC<HistoryProps> = ({
 
         <Text style={styles.cardSubtitle}>{title}</Text>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaIcon}>📅</Text>
-          <Text style={styles.metaText}>{date}</Text>
-        </View>
+        {/* removed calendar row as requested */}
       </TouchableOpacity>
     );
   };
+
+  const q = (query || "").trim().toLowerCase();
+  const source =
+    selectedTab === "orders"
+      ? orders
+      : selectedTab === "repairs"
+      ? repairs
+      : works;
+  const filtered = q
+    ? source.filter((o) =>
+        [
+          o?.purchaser?.name,
+          o?.subject_name,
+          o?.title,
+          o?.status,
+          o?.state,
+          String(o?.id ?? o?.response_id ?? o?.repair_id ?? ""),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      )
+    : source;
 
   return (
     <View style={{ flex: 1 }}>
@@ -242,13 +261,7 @@ const History: React.FC<HistoryProps> = ({
       ) : null}
 
       <FlatList
-        data={
-          selectedTab === "orders"
-            ? orders
-            : selectedTab === "repairs"
-            ? repairs
-            : works
-        }
+        data={filtered}
         keyExtractor={(i) =>
           String(i?.id ?? i?.response_id ?? i?.repair_id ?? Math.random())
         }
@@ -262,7 +275,7 @@ const History: React.FC<HistoryProps> = ({
               onPress={() => setShowRaw((s) => !s)}
               style={{ marginTop: 8 }}
             >
-              <Text style={{ color: "#3B82F6" }}>
+              <Text style={{ color: "#ec4899" }}>
                 {showRaw ? "Hide raw response" : "Show raw response"}
               </Text>
             </TouchableOpacity>
@@ -282,7 +295,7 @@ const History: React.FC<HistoryProps> = ({
               setRefreshing(true);
               fetchHistory();
             }}
-            colors={["#3B82F6"]}
+            colors={["#ec4899"]}
           />
         }
       />
@@ -295,7 +308,7 @@ const styles = StyleSheet.create({
   section: {},
   tabsRow: {
     flexDirection: "row",
-    backgroundColor: "#0F1724",
+    backgroundColor: "#fde2e9",
     borderRadius: 14,
     padding: 6,
     marginBottom: 12,
@@ -307,37 +320,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tabActive: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#ec4899",
   },
-  tabText: { color: "#94A3B8", fontWeight: "700" },
-  tabTextActive: { color: "#fff" },
+  tabText: { color: "#374151", fontWeight: "700" },
+  tabTextActive: { color: "#ffffff" },
   sectionTitle: {
     color: "#E6EEF8",
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 12,
   },
-  empty: { color: "#94A3B8" },
+  empty: { color: "#6b7280" },
   card: {
-    backgroundColor: "#082033",
+    backgroundColor: "#fde2e9",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#163147",
+    borderColor: "#f9a8d4",
   },
-  cardTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  cardSubtitle: { color: "#94A3B8", marginTop: 6 },
-  metaRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-  metaIcon: { marginRight: 8, color: "#94A3B8" },
-  metaText: { color: "#94A3B8" },
+  cardTitle: { color: "#111827", fontWeight: "700", fontSize: 16 },
+  cardSubtitle: { color: "#6b7280", marginTop: 6 },
+  // meta row removed
   statusPill: {
-    backgroundColor: "#0F766E",
+    backgroundColor: "#ec4899",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     alignSelf: "flex-start",
   },
-  statusText: { color: "#E6FFF7", fontWeight: "700" },
+  statusText: { color: "#ffffff", fontWeight: "700" },
+  // search input moved to App header
 });
 
 export default History;

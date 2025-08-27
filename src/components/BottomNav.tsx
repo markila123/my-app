@@ -9,7 +9,7 @@ export type BottomNavProps = {
 };
 
 const labels: Record<TabKey, string> = {
-  rea1: "რეაგირება1",
+  rea1: "რეაგირება",
   remont: "რემონტი",
   rea: "რეაგირება",
   ghegmiri: "გეგმიური",
@@ -44,12 +44,12 @@ const BottomNav: React.FC<BottomNavProps> = ({ active, onSelect }) => {
 const styles = StyleSheet.create({
   container: {
     height: 72,
-    backgroundColor: "#031226",
+    backgroundColor: "#ffffff",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
     borderTopWidth: 1,
-    borderTopColor: "#0b2740",
+    borderTopColor: "#f9a8d4",
   },
   tab: {
     flex: 1,
@@ -60,18 +60,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#082033",
+    backgroundColor: "#fde2e9",
     marginBottom: 6,
   },
   iconActive: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#ec4899",
   },
   label: {
-    color: "#9AA9B8",
+    color: "#374151",
     fontSize: 12,
   },
   labelActive: {
-    color: "#fff",
+    color: "#111827",
     fontWeight: "700",
   },
 });

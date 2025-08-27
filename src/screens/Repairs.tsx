@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 
 export type RepairItem = {
@@ -29,6 +30,7 @@ type RepairsProps = {
   jwtToken?: string;
   baseUrl?: string;
   onOpen?: (id: number) => void; // new prop to open detail
+  query?: string;
 };
 
 const BASE_URL_DEFAULT = "https://testinvoice.inservice.ge/api";
@@ -49,6 +51,7 @@ const Repairs: React.FC<RepairsProps> = ({
   jwtToken = "",
   baseUrl = BASE_URL_DEFAULT,
   onOpen,
+  query = "",
 }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -125,15 +128,6 @@ const Repairs: React.FC<RepairsProps> = ({
           <Text style={styles.cardTitle}>
             {item.subject_name ?? item.content ?? "----"}
           </Text>
-          {item.subject_address ? (
-            <Text style={styles.cardSub}>{item.subject_address}</Text>
-          ) : null}
-
-          {item.created_at ? (
-            <Text style={styles.cardMeta}>
-              შექმნილია: {new Date(item.created_at).toLocaleString()}
-            </Text>
-          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -142,10 +136,21 @@ const Repairs: React.FC<RepairsProps> = ({
   if (loading && repairs.length === 0) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#ec4899" />
       </View>
     );
   }
+
+  const q = (query || "").trim().toLowerCase();
+  const filtered = q
+    ? repairs.filter((o) =>
+        [o.subject_name, o.content, o.status_text, o.status_label, String(o.id)]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      )
+    : repairs;
 
   return (
     <View style={{ flex: 1 }}>
@@ -156,16 +161,17 @@ const Repairs: React.FC<RepairsProps> = ({
       ) : null}
 
       <FlatList
-        data={repairs}
+        data={filtered}
         keyExtractor={(i) => String(i.id)}
         renderItem={renderItem}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         contentContainerStyle={{ padding: 12 }}
+        ListHeaderComponent={<View style={{ height: 0 }} />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#3B82F6"]}
+            colors={["#ec4899"]}
           />
         }
       />
@@ -176,11 +182,11 @@ const Repairs: React.FC<RepairsProps> = ({
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   card: {
-    backgroundColor: "#082033",
+    backgroundColor: "#fde2e9",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#163147",
+    borderColor: "#f9a8d4",
   },
   cardRow: {
     flexDirection: "row",
@@ -189,34 +195,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardId: {
-    color: "#fff",
+    color: "#111827",
     fontWeight: "700",
     fontSize: 16,
   },
   statusPill: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ec4899",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 18,
   },
   statusText: {
-    color: "#082033",
+    color: "#ffffff",
     fontWeight: "700",
     fontSize: 12,
   },
   cardTitle: {
-    color: "#E6EEF8",
+    color: "#111827",
     fontSize: 14,
     marginBottom: 6,
   },
-  cardSub: {
-    color: "#94A3B8",
-    marginBottom: 8,
-  },
-  cardMeta: {
-    color: "#60A5FA",
-    marginTop: 6,
-  },
+  // search input moved to App header
 });
 
 export default Repairs;
