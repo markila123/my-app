@@ -15,6 +15,7 @@ import Repairs from "./src/screens/Repairs";
 import RepairDetails from "./src/screens/RepairDetails";
 import Orders from "./src/screens/Orders";
 import OrderDetails from "./src/screens/OrderDetails";
+import Services from "./src/screens/Services";
 import History from "./src/screens/History";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("rea");
   const [openRepairId, setOpenRepairId] = useState<number | null>(null);
   const [openOrderId, setOpenOrderId] = useState<number | null>(null);
+  const [openServiceId, setOpenServiceId] = useState<number | null>(null);
   const [openHistoryOrderId, setOpenHistoryOrderId] = useState<number | null>(
     null
   );
@@ -191,6 +193,19 @@ export default function App() {
             <Orders
               jwtToken={DEFAULT_JWT}
               onOpen={(id) => setOpenOrderId(id)}
+            />
+          )
+        ) : activeTab === "ghegmiri" ? (
+          openServiceId ? (
+            <OrderDetails
+              id={openServiceId}
+              jwtToken={DEFAULT_JWT}
+              onClose={() => setOpenServiceId(null)}
+            />
+          ) : (
+            <Services
+              jwtToken={DEFAULT_JWT}
+              onOpen={(id) => setOpenServiceId(id)}
             />
           )
         ) : activeTab === "istoria" ? (
