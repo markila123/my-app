@@ -17,6 +17,7 @@ const labels: Record<TabKey, string> = {
 };
 
 const BottomNav: React.FC<BottomNavProps> = ({ active, onSelect }) => {
+  // Keep this order in sync with App.tsx TAB_ORDER for swipe navigation
   const tabs: TabKey[] = ["rea1", "remont", "rea", "ghegmiri", "istoria"];
 
   return (

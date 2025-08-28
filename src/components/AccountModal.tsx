@@ -125,8 +125,12 @@ const AccountModal: React.FC<Props> = ({
             let c: any =
               json?.contract ??
               json?.data?.contract ??
-              (Array.isArray(json?.contracts) ? json.contracts[0] : undefined) ??
-              (Array.isArray(json?.data?.contracts) ? json.data.contracts[0] : undefined) ??
+              (Array.isArray(json?.contracts)
+                ? json.contracts[0]
+                : undefined) ??
+              (Array.isArray(json?.data?.contracts)
+                ? json.data.contracts[0]
+                : undefined) ??
               json?.data ??
               json?.item ??
               json;
@@ -192,7 +196,8 @@ const AccountModal: React.FC<Props> = ({
   };
 
   const statusText = useMemo(() => {
-    const raw = contract?.status ?? contract?.state ?? contract?.contract_status;
+    const raw =
+      contract?.status ?? contract?.state ?? contract?.contract_status;
     return mapStatusLabel(statusMap, { status: raw });
   }, [contract, statusMap]);
 
@@ -304,12 +309,14 @@ const AccountModal: React.FC<Props> = ({
                   {profile?.phone ? (
                     <Row label="ტელეფონი" value={profile.phone} />
                   ) : null}
-                     {profile?.identification_code || profile?.companyCode ? (
-                       <Row
-                         label="საიდენტიფიკაციო კოდი"
-                         value={String(profile?.identification_code ?? profile?.companyCode)}
-                       />
-                     ) : null}
+                  {profile?.identification_code || profile?.companyCode ? (
+                    <Row
+                      label="საიდენტიფიკაციო კოდი"
+                      value={String(
+                        profile?.identification_code ?? profile?.companyCode
+                      )}
+                    />
+                  ) : null}
                   <Row
                     label="შექმნის თარიღი"
                     value={fmtDate(

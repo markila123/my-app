@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   StyleSheet,
@@ -8,6 +8,9 @@ import {
   Text,
   Alert,
   TextInput,
+  PanResponder,
+  GestureResponderEvent,
+  PanResponderGestureState,
 } from "react-native";
 import AppButton from "./src/components/AppButton";
 import AppInput from "./src/components/AppInput";
@@ -49,6 +52,61 @@ export default function App() {
   const [profileName, setProfileName] = useState<string | null>(null);
   const [knownEmail, setKnownEmail] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // bottom tabs order for swipe navigation
+  const TAB_ORDER: TabKey[] = ["rea1", "remont", "rea", "ghegmiri", "istoria"];
+
+  // swipe gesture handler
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) => {
+        // start responding when a mostly-horizontal move with sufficient distance
+        const dx = Math.abs(gesture.dx);
+        const dy = Math.abs(gesture.dy);
+        return dx > 25 && dx > dy * 1.2; // prefer horizontal gestures
+      },
+      onPanResponderRelease: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) => {
+        const dx = gesture.dx;
+        const vx = gesture.vx;
+        const isHorizontal = Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(gesture.dy);
+        if (!isHorizontal) return;
+
+        const goBackIfDetailOpen = () => {
+          if (openRepairId !== null) {
+            setOpenRepairId(null);
+            return true;
+          }
+          if (openOrderId !== null) {
+            setOpenOrderId(null);
+            return true;
+          }
+          if (openServiceId !== null) {
+            setOpenServiceId(null);
+            return true;
+          }
+          if (openHistoryOrderId !== null) {
+            setOpenHistoryOrderId(null);
+            return true;
+          }
+          return false;
+        };
+
+        // First, treat swipe as a back gesture when any detail is open
+        if (goBackIfDetailOpen()) return;
+
+        // Otherwise switch tabs left/right
+        const idx = TAB_ORDER.indexOf(activeTab);
+        if (idx < 0) return;
+        const dir = dx < 0 ? 1 : -1; // swipe left -> next tab; right -> previous
+        let nextIdx = idx + dir;
+        // require intent: either fast fling or longer distance
+        const intended = Math.abs(vx) > 0.2 || Math.abs(dx) > 60;
+        if (!intended) return;
+        if (nextIdx < 0 || nextIdx >= TAB_ORDER.length) return; // no wrap-around
+        setActiveTab(TAB_ORDER[nextIdx]);
+      },
+    })
+  ).current;
 
   // Restore saved auth on mount
   useEffect(() => {
@@ -156,7 +214,7 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...panResponder.panHandlers}>
       <View style={styles.topSpacer} />
 
       {/* App Header: light pink background with bottom pink border */}
@@ -275,7 +333,7 @@ export default function App() {
                 />
                 <AppInput
                   label="სამუშოს აღწერა"
-                  placeholder="ანგრესთ შესას..."
+                  placeholder="აღწერეთ შესასრულებელი სამუშაო..."
                   style={{ marginTop: 12, height: 140 }}
                   multiline
                   textAlignVertical="top"
