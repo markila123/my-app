@@ -11,6 +11,9 @@ import {
   PanResponder,
   GestureResponderEvent,
   PanResponderGestureState,
+  Dimensions,
+  BackHandler,
+  Platform,
   Modal,
 } from "react-native";
 import AppButton from "./src/components/AppButton";
@@ -66,6 +69,32 @@ export default function App() {
   // swipe gesture handler
   const panResponder = useRef(
     PanResponder.create({
+      // Capture horizontal gestures even if a child (e.g., ScrollView) becomes responder
+      onMoveShouldSetPanResponderCapture: (
+        _evt: GestureResponderEvent,
+        gesture: PanResponderGestureState
+      ) => {
+        const dx = Math.abs(gesture.dx);
+        const dy = Math.abs(gesture.dy);
+        if (!(dx > 25 && dx > dy * 1.2)) return false;
+        // If a detail is open, only allow edge swipes to trigger (avoid inside content horizontal moves)
+        const isDetailOpen =
+          openRepairId !== null ||
+          openOrderId !== null ||
+          openServiceId !== null ||
+          openHistoryOrderId !== null;
+        if (!isDetailOpen) return true;
+        // Avoid the OS back swipe region by requiring a near-edge band instead of the extreme edge
+        const EDGE_MIN = 80; // inner start (px)
+        const EDGE_MAX = 200; // inner end (px)
+        const { width } = Dimensions.get("window");
+        const startX = gesture.x0;
+        const leftBand = startX >= EDGE_MIN && startX <= EDGE_MAX;
+        const rightBand =
+          startX >= width - EDGE_MAX && startX <= width - EDGE_MIN;
+        // require outward swipe direction too
+        return (leftBand && gesture.dx > 0) || (rightBand && gesture.dx < 0);
+      },
       onMoveShouldSetPanResponder: (
         _evt: GestureResponderEvent,
         gesture: PanResponderGestureState
@@ -73,7 +102,21 @@ export default function App() {
         // start responding when a mostly-horizontal move with sufficient distance
         const dx = Math.abs(gesture.dx);
         const dy = Math.abs(gesture.dy);
-        return dx > 25 && dx > dy * 1.2; // prefer horizontal gestures
+        if (!(dx > 25 && dx > dy * 1.2)) return false; // prefer horizontal gestures
+        const isDetailOpen =
+          openRepairId !== null ||
+          openOrderId !== null ||
+          openServiceId !== null ||
+          openHistoryOrderId !== null;
+        if (!isDetailOpen) return true;
+        const EDGE_MIN = 80;
+        const EDGE_MAX = 200;
+        const { width } = Dimensions.get("window");
+        const startX = gesture.x0;
+        const leftBand = startX >= EDGE_MIN && startX <= EDGE_MAX;
+        const rightBand =
+          startX >= width - EDGE_MAX && startX <= width - EDGE_MIN;
+        return (leftBand && gesture.dx > 0) || (rightBand && gesture.dx < 0);
       },
       onPanResponderRelease: (
         _evt: GestureResponderEvent,
@@ -84,6 +127,16 @@ export default function App() {
         const isHorizontal =
           Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(gesture.dy);
         if (!isHorizontal) return;
+
+        const isDetailOpen =
+          openRepairId !== null ||
+          openOrderId !== null ||
+          openServiceId !== null ||
+          openHistoryOrderId !== null;
+        const EDGE_MIN = 80;
+        const EDGE_MAX = 200;
+        const { width } = Dimensions.get("window");
+        const startX = gesture.x0;
 
         const goBackIfDetailOpen = () => {
           if (openRepairId !== null) {
@@ -105,8 +158,18 @@ export default function App() {
           return false;
         };
 
-        // First, treat swipe as a back gesture when any detail is open
-        if (goBackIfDetailOpen()) return;
+        // First, treat swipe as a back gesture when any detail is open, but only for edge swipes
+        if (isDetailOpen) {
+          const leftBand = startX >= EDGE_MIN && startX <= EDGE_MAX;
+          const rightBand =
+            startX >= width - EDGE_MAX && startX <= width - EDGE_MIN;
+          const outward = (leftBand && dx > 0) || (rightBand && dx < 0);
+          const edgeSwipe = (leftBand || rightBand) && outward;
+          const intended = Math.abs(vx) > 0.2 || Math.abs(dx) > 60;
+          if (edgeSwipe && intended) {
+            if (goBackIfDetailOpen()) return;
+          }
+        }
 
         // Otherwise switch tabs left/right
         const idx = TAB_ORDER.indexOf(activeTab);
@@ -143,6 +206,27 @@ export default function App() {
       } catch {}
     }
   }, []);
+
+  // Android hardware back should close an open detail instead of exiting the app
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (
+        openRepairId !== null ||
+        openOrderId !== null ||
+        openServiceId !== null ||
+        openHistoryOrderId !== null
+      ) {
+        if (openRepairId !== null) setOpenRepairId(null);
+        else if (openOrderId !== null) setOpenOrderId(null);
+        else if (openServiceId !== null) setOpenServiceId(null);
+        else if (openHistoryOrderId !== null) setOpenHistoryOrderId(null);
+        return true; // handled
+      }
+      return false; // allow default behavior
+    });
+    return () => sub.remove();
+  }, [openRepairId, openOrderId, openServiceId, openHistoryOrderId]);
 
   // contract inputs
   const [branch, setBranch] = useState("");
