@@ -332,7 +332,7 @@ export default function App() {
                   error={errors.branch ?? null}
                 />
                 <AppInput
-                  label="სამუშოს აღწერა"
+                  label="სამუშაოს აღწერა"
                   placeholder="აღწერეთ შესასრულებელი სამუშაო..."
                   style={{ marginTop: 12, height: 140 }}
                   multiline
@@ -361,8 +361,8 @@ export default function App() {
                   error={errors.address ?? null}
                 />
                 <AppInput
-                  label="სამუშოს აღწერა"
-                  placeholder="ადნმერეთ შესას..."
+                  label="სამუშაოს აღწერა"
+                  placeholder="აღწერეთ შესასრულებელი სამუშაო..."
                   style={{ marginTop: 12, height: 140 }}
                   multiline
                   textAlignVertical="top"

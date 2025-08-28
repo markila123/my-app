@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   ActivityIndicator,
   ScrollView,
   TouchableOpacity,
+  PanResponder,
+  GestureResponderEvent,
+  PanResponderGestureState,
 } from "react-native";
 
 type OrderDetailsProps = {
@@ -26,6 +29,32 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+
+  // Horizontal swipe to close details
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (
+        _evt: GestureResponderEvent,
+        gesture: PanResponderGestureState
+      ) => {
+        const dx = Math.abs(gesture.dx);
+        const dy = Math.abs(gesture.dy);
+        // Only claim gesture on meaningful horizontal movement
+        return dx > 25 && dx > dy * 1.2;
+      },
+      onPanResponderRelease: (
+        _evt: GestureResponderEvent,
+        gesture: PanResponderGestureState
+      ) => {
+        const { dx, vx, dy } = gesture;
+        const isHorizontal = Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy);
+        const intended = Math.abs(vx) > 0.2 || Math.abs(dx) > 60;
+        if (isHorizontal && intended) {
+          onClose?.();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     let mounted = true;
@@ -83,7 +112,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   const additional = data?.additional_data ?? resp?.additional_data ?? null;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
+    <ScrollView contentContainerStyle={{ padding: 12 }} {...panResponder.panHandlers}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>შეკვეთის დეტალები</Text>
 
