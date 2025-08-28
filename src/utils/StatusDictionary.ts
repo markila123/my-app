@@ -80,14 +80,8 @@ async function tryFetch(
 function getDefaultMap(
   type?: "responses" | "repairs" | "services" | "history"
 ): StatusMap {
-  // Reasonable defaults in Georgian, used when API doesn't expose a dictionary
-  const common: StatusMap = {
-    1: "ელოდება დადასტურებას",
-    2: "მიმდინარეობს შესრულება",
-    3: "დასრულებული",
-  };
-  // Can be customized per type if needed later
-  return common;
+  // No hardcoded defaults; show numeric codes unless API provides labels
+  return {};
 }
 
 export async function loadStatusMap(
@@ -135,7 +129,7 @@ export async function loadStatusMap(
       break;
     }
   }
-  const merged = { ...getDefaultMap(type), ...(fetched || {}) } as StatusMap;
+  const merged = (fetched || {}) as StatusMap;
   cache.set(key, merged);
   return merged;
 }

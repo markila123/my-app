@@ -29,6 +29,8 @@ import {
 import AccountModal from "./src/components/AccountModal";
 
 export default function App() {
+  // Avoid flashing the auth screen before async auth restore completes
+  const [restoring, setRestoring] = useState(true);
   const [mode, setMode] = useState<"contract" | "noncontract">("contract");
   const [activeTab, setActiveTab] = useState<TabKey>("rea");
   const [openRepairId, setOpenRepairId] = useState<number | null>(null);
@@ -57,6 +59,7 @@ export default function App() {
       if (t) setToken(t);
       if (e) setKnownEmail(e);
       if (n) setProfileName(n);
+      setRestoring(false);
     })();
   }, []);
 
@@ -99,7 +102,16 @@ export default function App() {
     istoria: "ისტორია",
   };
 
-  // If no token, show auth flow immediately
+  // While restoring, render nothing to prevent login flash
+  if (restoring) {
+    return (
+      <SafeAreaView style={styles.container}>
+        {/* restoring session */}
+      </SafeAreaView>
+    );
+  }
+
+  // If no token, show auth flow
   if (!token) {
     return (
       <SafeAreaView style={styles.container}>
@@ -320,6 +332,7 @@ export default function App() {
             <Repairs
               jwtToken={token || undefined}
               onOpen={(id) => setOpenRepairId(id)}
+              query={searchQuery}
             />
           )
         ) : activeTab === "rea1" ? (
@@ -333,6 +346,7 @@ export default function App() {
             <Orders
               jwtToken={token || undefined}
               onOpen={(id) => setOpenOrderId(id)}
+              query={searchQuery}
             />
           )
         ) : activeTab === "ghegmiri" ? (
@@ -346,6 +360,7 @@ export default function App() {
             <Services
               jwtToken={token || undefined}
               onOpen={(id) => setOpenServiceId(id)}
+              query={searchQuery}
             />
           )
         ) : activeTab === "istoria" ? (
@@ -359,6 +374,7 @@ export default function App() {
             <History
               jwtToken={token || undefined}
               onOpen={(id) => setOpenHistoryOrderId(id)}
+              query={searchQuery}
             />
           )
         ) : (
