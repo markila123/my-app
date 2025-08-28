@@ -32,7 +32,7 @@ const AuthRegister: React.FC<Props> = ({
       !password.trim() ||
       !companyCode.trim()
     ) {
-      setError("გთხოვთ შევსოთ ყველა ველი");
+      setError("გთხოვთ შეავსოთ ყველა ველი");
       return;
     }
     setLoading(true);
