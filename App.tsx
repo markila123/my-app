@@ -59,16 +59,23 @@ export default function App() {
   // swipe gesture handler
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) => {
+      onMoveShouldSetPanResponder: (
+        _evt: GestureResponderEvent,
+        gesture: PanResponderGestureState
+      ) => {
         // start responding when a mostly-horizontal move with sufficient distance
         const dx = Math.abs(gesture.dx);
         const dy = Math.abs(gesture.dy);
         return dx > 25 && dx > dy * 1.2; // prefer horizontal gestures
       },
-      onPanResponderRelease: (_evt: GestureResponderEvent, gesture: PanResponderGestureState) => {
+      onPanResponderRelease: (
+        _evt: GestureResponderEvent,
+        gesture: PanResponderGestureState
+      ) => {
         const dx = gesture.dx;
         const vx = gesture.vx;
-        const isHorizontal = Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(gesture.dy);
+        const isHorizontal =
+          Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(gesture.dy);
         if (!isHorizontal) return;
 
         const goBackIfDetailOpen = () => {

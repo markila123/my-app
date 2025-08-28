@@ -130,7 +130,10 @@ const RepairDetails: React.FC<RepairDetailsProps> = ({
     null;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }} {...panResponder.panHandlers}>
+    <ScrollView
+      contentContainerStyle={{ padding: 12 }}
+      {...panResponder.panHandlers}
+    >
       {/* რეაგირების დეტალები */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>რეაგირების დეტალები</Text>

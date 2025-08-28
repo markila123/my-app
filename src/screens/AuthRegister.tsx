@@ -43,6 +43,8 @@ const AuthRegister: React.FC<Props> = ({
         password,
         password_confirmation: password,
         companyCode,
+        // Map company code to identification_code so it appears on the profile
+        identification_code: companyCode,
       };
       const res = await fetch(`${baseUrl}/app/clients/register`, {
         method: "POST",

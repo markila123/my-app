@@ -112,7 +112,10 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({
   const additional = data?.additional_data ?? resp?.additional_data ?? null;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }} {...panResponder.panHandlers}>
+    <ScrollView
+      contentContainerStyle={{ padding: 12 }}
+      {...panResponder.panHandlers}
+    >
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>შეკვეთის დეტალები</Text>
 
