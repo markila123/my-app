@@ -11,6 +11,7 @@ import {
   PanResponder,
   GestureResponderEvent,
   PanResponderGestureState,
+  Modal,
 } from "react-native";
 import AppButton from "./src/components/AppButton";
 import AppInput from "./src/components/AppInput";
@@ -30,6 +31,10 @@ import {
   storageRemove,
 } from "./src/utils/LocalStorage";
 import AccountModal from "./src/components/AccountModal";
+// Dev-only network logger to view fetch/XHR calls inside the app (Expo-safe)
+import NetworkLogger, {
+  startNetworkLogging,
+} from "./src/utils/DevNetworkLogger";
 
 export default function App() {
   // Avoid flashing the auth screen before async auth restore completes
@@ -52,6 +57,8 @@ export default function App() {
   const [profileName, setProfileName] = useState<string | null>(null);
   const [knownEmail, setKnownEmail] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  // Dev tools
+  const [showNetworkLogger, setShowNetworkLogger] = useState(false);
 
   // bottom tabs order for swipe navigation
   const TAB_ORDER: TabKey[] = ["rea1", "remont", "rea", "ghegmiri", "istoria"];
@@ -126,6 +133,15 @@ export default function App() {
       if (n) setProfileName(n);
       setRestoring(false);
     })();
+  }, []);
+
+  // Start logging network requests in development so they can be inspected in-app
+  useEffect(() => {
+    if (__DEV__) {
+      try {
+        startNetworkLogging();
+      } catch {}
+    }
   }, []);
 
   // contract inputs
@@ -279,6 +295,9 @@ export default function App() {
 
           <TouchableOpacity
             onPress={() => setAccountOpen(true)}
+            onLongPress={() => {
+              if (__DEV__) setShowNetworkLogger(true);
+            }}
             activeOpacity={0.85}
             style={{ width: 36, alignItems: "flex-end" }}
           >
@@ -469,6 +488,32 @@ export default function App() {
       />
 
       <StatusBar style="auto" />
+
+      {__DEV__ && (
+        <Modal
+          visible={showNetworkLogger}
+          animationType="slide"
+          onRequestClose={() => setShowNetworkLogger(false)}
+        >
+          <SafeAreaView style={{ flex: 1, backgroundColor: "#111827" }}>
+            <NetworkLogger theme="dark" />
+            <TouchableOpacity
+              onPress={() => setShowNetworkLogger(false)}
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                backgroundColor: "#00000099",
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>Close</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }

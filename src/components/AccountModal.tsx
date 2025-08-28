@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   View,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  Alert,
 } from "react-native";
 import AppButton from "./AppButton";
 import {
@@ -42,6 +43,8 @@ const AccountModal: React.FC<Props> = ({
   const [reloadKey, setReloadKey] = useState(0);
   const [section, setSection] = useState<SectionKey>("profile");
   const [statusMap, setStatusMap] = useState<StatusMap>({});
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -67,7 +70,7 @@ const AccountModal: React.FC<Props> = ({
       setLoading(true);
       setError(null);
       try {
-        // 1) Fetch profile
+        // Fetch profile
         let lastErr: any = null;
         let fetchedProfile: any = null;
         for (const url of profileEndpoints) {
@@ -100,7 +103,7 @@ const AccountModal: React.FC<Props> = ({
         }
         if (lastErr) throw lastErr;
 
-        // 2) Fetch contract
+        // Fetch contract
         lastErr = null;
         let fetchedContract: any = null;
         for (const url of contractEndpoints) {
@@ -144,12 +147,12 @@ const AccountModal: React.FC<Props> = ({
           }
         }
 
-        // 3) Fallback: if no contract endpoint provided data, use client in profile
+        // Fallback: if no contract endpoint provided data, use client in profile
         if (!fetchedContract && fetchedProfile?.client) {
           if (mounted) setContract(fetchedProfile.client);
         }
 
-        // 4) Optional: load status map (for status labels)
+        // Load status map (optional)
         try {
           const sm = await loadStatusMap(baseUrl, token, "services");
           if (mounted) setStatusMap(sm);
@@ -167,23 +170,6 @@ const AccountModal: React.FC<Props> = ({
     };
   }, [visible, token, baseUrl, reloadKey]);
 
-  const handleLogout = async () => {
-    try {
-      setLoading(true);
-      await fetch(`${baseUrl}/app/logout`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      }).catch(() => {}); // ignore network errors
-    } finally {
-      setLoading(false);
-      await onLogout?.();
-    }
-  };
-
-  // derived values helpers
   const fmtDate = (v: any) => {
     if (!v) return "—";
     try {
@@ -201,6 +187,78 @@ const AccountModal: React.FC<Props> = ({
     return mapStatusLabel(statusMap, { status: raw });
   }, [contract, statusMap]);
 
+  const handleLogout = async () => {
+    try {
+      setLoading(true);
+      await fetch(`${baseUrl}/app/logout`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch(() => {});
+    } finally {
+      setLoading(false);
+      await onLogout?.();
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    if (deleteLoading) return;
+    setConfirmDeleteVisible(true);
+  };
+
+  const doDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      const deleteAttempts: Array<{ url: string; method: "DELETE" | "POST" }> =
+        [
+          { url: `${baseUrl}/app/me`, method: "DELETE" },
+          { url: `${baseUrl}/me`, method: "DELETE" },
+          { url: `${baseUrl}/clients/me`, method: "DELETE" },
+          { url: `${baseUrl}/user`, method: "DELETE" },
+          { url: `${baseUrl}/app/delete-account`, method: "POST" },
+          { url: `${baseUrl}/delete-account`, method: "POST" },
+        ];
+
+      let success = false;
+      let lastErr: any = null;
+      for (const attempt of deleteAttempts) {
+        try {
+          const res = await fetch(attempt.url, {
+            method: attempt.method,
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (res.ok || res.status === 204) {
+            success = true;
+            break;
+          }
+          const txt = await res.text();
+          lastErr = new Error(txt || `HTTP ${res.status}`);
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+
+      if (!success) throw lastErr || new Error("ანგარიშის წაშლა ვერ მოხერხდა");
+
+      Alert.alert("ანგარიში წაიშალა", "თქვენი ანგარიში წარმატებით წაიშალა.");
+      await onLogout?.();
+      onClose();
+    } catch (e: any) {
+      Alert.alert(
+        "შეცდომა",
+        e?.message || "ანგარიშის წაშლა ვერ მოხერხდა, სცადეთ მოგვიანებით."
+      );
+    } finally {
+      setDeleteLoading(false);
+      setConfirmDeleteVisible(false);
+    }
+  };
+
   return (
     <Modal
       transparent
@@ -208,262 +266,324 @@ const AccountModal: React.FC<Props> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={styles.card}
-          onPress={() => {
-            /* keep open when card pressed */
-          }}
-        >
-          <TouchableOpacity
-            onPress={onClose}
-            style={styles.closeBtn}
-            hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
-          >
-            <Text style={{ color: "#94A3B8", fontSize: 22 }}>✕</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.title}>ანგარიში</Text>
-
-          {/* Tabs */}
-          <View style={styles.tabsRow}>
+      <View style={{ flex: 1 }}>
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable style={styles.card} onPress={() => {}}>
             <TouchableOpacity
-              style={[styles.tab, section === "profile" && styles.tabActive]}
-              onPress={() => setSection("profile")}
+              onPress={onClose}
+              style={styles.closeBtn}
+              hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
             >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  section === "profile" && styles.tabLabelActive,
-                ]}
-              >
-                მომხმარებლის მონაცემები
-              </Text>
+              <Text style={{ color: "#94A3B8", fontSize: 22 }}>✕</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                section === "contractDetails" && styles.tabActive,
-              ]}
-              onPress={() => setSection("contractDetails")}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  section === "contractDetails" && styles.tabLabelActive,
-                ]}
-              >
-                კონტრაქტის დეტალები
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                section === "contractInfo" && styles.tabActive,
-              ]}
-              onPress={() => setSection("contractInfo")}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  section === "contractInfo" && styles.tabLabelActive,
-                ]}
-              >
-                საკონტრაქტო ინფორმაცია
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          {loading ? (
-            <ActivityIndicator color="#3B82F6" style={{ marginVertical: 20 }} />
-          ) : error ? (
-            <View>
-              <Text style={{ color: "#F97316" }}>{error}</Text>
-              <TouchableOpacity onPress={() => setReloadKey((k) => k + 1)}>
-                <Text style={{ color: "#60A5FA", marginTop: 8 }}>
-                  სცადეთ თავიდან
+            <Text style={styles.title}>ანგარიში</Text>
+
+            <View style={styles.tabsRow}>
+              <TouchableOpacity
+                style={[styles.tab, section === "profile" && styles.tabActive]}
+                onPress={() => setSection("profile")}
+              >
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    section === "profile" && styles.tabLabelActive,
+                  ]}
+                >
+                  მომხმარებლის მონაცემები
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  section === "contractDetails" && styles.tabActive,
+                ]}
+                onPress={() => setSection("contractDetails")}
+              >
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    section === "contractDetails" && styles.tabLabelActive,
+                  ]}
+                >
+                  კონტრაქტის დეტალები
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.tab,
+                  section === "contractInfo" && styles.tabActive,
+                ]}
+                onPress={() => setSection("contractInfo")}
+              >
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    section === "contractInfo" && styles.tabLabelActive,
+                  ]}
+                >
+                  საკონტრაქტო ინფორმაცია
                 </Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <ScrollView style={{ width: "100%", maxHeight: 480 }}>
-              {section === "profile" && (
-                <View>
-                  <Row
-                    label="მომხმარებლის ID"
-                    value={String(
-                      profile?.id ??
-                        profile?.user_id ??
-                        profile?.client_id ??
-                        "—"
-                    )}
-                  />
-                  <Row
-                    label="სახელი"
-                    value={profile?.name || profile?.full_name || "—"}
-                  />
-                  <Row
-                    label="ელ-ფოსტა"
-                    value={profile?.email || profile?.mail || "—"}
-                  />
-                  {profile?.phone ? (
-                    <Row label="ტელეფონი" value={profile.phone} />
-                  ) : null}
-                  {profile?.identification_code || profile?.companyCode ? (
+
+            {loading ? (
+              <ActivityIndicator
+                color="#3B82F6"
+                style={{ marginVertical: 20 }}
+              />
+            ) : error ? (
+              <View>
+                <Text style={{ color: "#F97316" }}>{error}</Text>
+                <TouchableOpacity onPress={() => setReloadKey((k) => k + 1)}>
+                  <Text style={{ color: "#60A5FA", marginTop: 8 }}>
+                    სცადეთ თავიდან
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView style={{ width: "100%", maxHeight: 480 }}>
+                {section === "profile" && (
+                  <View>
                     <Row
-                      label="საიდენტიფიკაციო კოდი"
+                      label="მომხმარებლის ID"
                       value={String(
-                        profile?.identification_code ?? profile?.companyCode
+                        profile?.id ??
+                          profile?.user_id ??
+                          profile?.client_id ??
+                          "—"
                       )}
                     />
-                  ) : null}
-                  <Row
-                    label="შექმნის თარიღი"
-                    value={fmtDate(
-                      profile?.created_at ||
-                        profile?.registered_at ||
-                        profile?.createdAt
-                    )}
-                  />
-                </View>
-              )}
+                    <Row
+                      label="სახელი"
+                      value={profile?.name || profile?.full_name || "—"}
+                    />
+                    <Row
+                      label="ელ-ფოსტა"
+                      value={profile?.email || profile?.mail || "—"}
+                    />
+                    {profile?.phone ? (
+                      <Row label="ტელეფონი" value={profile.phone} />
+                    ) : null}
+                    {(() => {
+                      const idCode =
+                        profile?.identification_code ??
+                        profile?.identificationCode ??
+                        profile?.companyCode ??
+                        profile?.company_code ??
+                        profile?.tax_number ??
+                        profile?.vat ??
+                        profile?.tin ??
+                        profile?.client?.identification_code ??
+                        profile?.client?.identificationCode ??
+                        profile?.client?.companyCode ??
+                        profile?.company?.identification_code ??
+                        profile?.company?.identificationCode ??
+                        profile?.company?.code ??
+                        null;
+                      return idCode ? (
+                        <Row
+                          label="საიდენტიფიკაციო კოდი"
+                          value={String(idCode)}
+                        />
+                      ) : null;
+                    })()}
+                    <Row
+                      label="შექმნის თარიღი"
+                      value={fmtDate(
+                        profile?.created_at ||
+                          profile?.registered_at ||
+                          profile?.createdAt
+                      )}
+                    />
+                  </View>
+                )}
 
-              {section === "contractDetails" && (
-                <View>
-                  <Row
-                    label="კლიენტის სახელი"
-                    value={
-                      contract?.client?.name ||
-                      contract?.client_name ||
-                      contract?.name ||
-                      "—"
-                    }
-                  />
-                  <Row
-                    label="საიდენტიფიციო კოდი"
-                    value={String(
-                      contract?.client?.identification_code ??
-                        contract?.identification_code ??
-                        contract?.tax_number ??
-                        contract?.vat ??
+                {section === "contractDetails" && (
+                  <View>
+                    <Row
+                      label="კლიენტის სახელი"
+                      value={
+                        contract?.client?.name ||
+                        contract?.client_name ||
+                        contract?.name ||
                         "—"
-                    )}
-                  />
-                  <Row
-                    label="კლიენტის ID კოდი"
-                    value={String(
-                      contract?.client?.code ??
-                        contract?.client_id ??
-                        contract?.id_code ??
-                        contract?.code ??
-                        "—"
-                    )}
-                  />
-                  <Row
-                    label="იურიდიული სტატუსი"
-                    value={
-                      contract?.client?.juridical_status ||
-                      contract?.juridical_status ||
-                      contract?.legal_status ||
-                      "—"
-                    }
-                  />
-                  <Row
-                    label="სერვისის სახელი"
-                    value={
-                      contract?.service_name ||
-                      contract?.service_type ||
-                      contract?.service ||
-                      contract?.category ||
-                      "—"
-                    }
-                  />
-                  <Row
-                    label="კონტრაქტის ტიპი"
-                    value={
-                      contract?.contract_service_type ||
-                      contract?.contract_type ||
-                      contract?.type ||
-                      "—"
-                    }
-                  />
-                  <Row
-                    label="დაწყება"
-                    value={fmtDate(
-                      contract?.contract_start_date ||
-                        contract?.start_date ||
-                        contract?.date_from ||
-                        contract?.contract_start
-                    )}
-                  />
-                  <Row
-                    label="დასრულება"
-                    value={fmtDate(
-                      contract?.contract_end_date ||
-                        contract?.end_date ||
-                        contract?.date_to ||
-                        contract?.contract_end
-                    )}
-                  />
-                  <Row
-                    label="კონტრაქტის სტატუსი"
-                    value={
-                      statusText ||
-                      String(
-                        contract?.contract_status ??
-                          contract?.status ??
-                          contract?.state ??
+                      }
+                    />
+                    <Row
+                      label="საიდენტიფიციო კოდი"
+                      value={String(
+                        contract?.client?.identification_code ??
+                          contract?.identification_code ??
+                          contract?.tax_number ??
+                          contract?.vat ??
                           "—"
-                      )
-                    }
-                  />
-                  <Row
-                    label="საკონტაქტო პირი"
-                    value={contract?.contact_name || "—"}
-                  />
-                  <Row
-                    label="საკონტაქტო ნომერი"
-                    value={contract?.contact_number || "—"}
-                  />
-                  <Row
-                    label="გარანტიის დაწყება"
-                    value={fmtDate(
-                      contract?.guarantee_start_date || contract?.guarantee_from
-                    )}
-                  />
-                  <Row
-                    label="გარანტიის დასრულება"
-                    value={fmtDate(
-                      contract?.guarantee_end_date || contract?.guarantee_to
-                    )}
-                  />
-                </View>
-              )}
+                      )}
+                    />
+                    <Row
+                      label="კლიენტის ID კოდი"
+                      value={String(
+                        contract?.client?.code ??
+                          contract?.client_id ??
+                          contract?.id_code ??
+                          contract?.code ??
+                          "—"
+                      )}
+                    />
+                    <Row
+                      label="იურიდიული სტატუსი"
+                      value={
+                        contract?.client?.juridical_status ||
+                        contract?.juridical_status ||
+                        contract?.legal_status ||
+                        "—"
+                      }
+                    />
+                    <Row
+                      label="სერვისის სახელი"
+                      value={
+                        contract?.service_name ||
+                        contract?.service_type ||
+                        contract?.service ||
+                        contract?.category ||
+                        "—"
+                      }
+                    />
+                    <Row
+                      label="კონტრაქტის ტიპი"
+                      value={
+                        contract?.contract_service_type ||
+                        contract?.contract_type ||
+                        contract?.type ||
+                        "—"
+                      }
+                    />
+                    <Row
+                      label="დაწყება"
+                      value={fmtDate(
+                        contract?.contract_start_date ||
+                          contract?.start_date ||
+                          contract?.date_from ||
+                          contract?.contract_start
+                      )}
+                    />
+                    <Row
+                      label="დასრულება"
+                      value={fmtDate(
+                        contract?.contract_end_date ||
+                          contract?.end_date ||
+                          contract?.date_to ||
+                          contract?.contract_end
+                      )}
+                    />
+                    <Row
+                      label="კონტრაქტის სტატუსი"
+                      value={
+                        statusText ||
+                        String(
+                          contract?.contract_status ??
+                            contract?.status ??
+                            contract?.state ??
+                            "—"
+                        )
+                      }
+                    />
+                    <Row
+                      label="საკონტაქტო პირი"
+                      value={contract?.contact_name || "—"}
+                    />
+                    <Row
+                      label="საკონტაქტო ნომერი"
+                      value={contract?.contact_number || "—"}
+                    />
+                    <Row
+                      label="გარანტიის დაწყება"
+                      value={fmtDate(
+                        contract?.guarantee_start_date ||
+                          contract?.guarantee_from
+                      )}
+                    />
+                    <Row
+                      label="გარანტიის დასრულება"
+                      value={fmtDate(
+                        contract?.guarantee_end_date || contract?.guarantee_to
+                      )}
+                    />
+                  </View>
+                )}
 
-              {section === "contractInfo" && (
-                <View>
-                  <Row
-                    label="საკონტრაქტო ტიპი"
-                    value={contract?.contract_type || contract?.type || "—"}
-                  />
-                  <Row
-                    label="საკონტრაქტო ნომერი"
-                    value={String(
-                      contract?.number ?? contract?.contract_number ?? "—"
-                    )}
-                  />
-                </View>
-              )}
-            </ScrollView>
-          )}
+                {section === "contractInfo" && (
+                  <View>
+                    <Row
+                      label="საკონტრაქტო ტიპი"
+                      value={contract?.contract_type || contract?.type || "—"}
+                    />
+                    <Row
+                      label="საკონტრაქტო ნომერი"
+                      value={String(
+                        contract?.number ?? contract?.contract_number ?? "—"
+                      )}
+                    />
+                  </View>
+                )}
+              </ScrollView>
+            )}
 
-          <AppButton
-            title="გამოსვლა"
-            onPress={handleLogout}
-            style={{ marginTop: 16, alignSelf: "stretch" }}
-          />
+            <AppButton
+              title="გამოსვლა"
+              onPress={handleLogout}
+              style={{ marginTop: 16, alignSelf: "stretch" }}
+            />
+            <AppButton
+              title="🗑️ ანგარიშის წაშლა"
+              onPress={confirmDeleteAccount}
+              loading={deleteLoading}
+              variant="primary"
+              style={{ marginTop: 8, alignSelf: "stretch" }}
+            />
+          </Pressable>
         </Pressable>
-      </Pressable>
+
+        {confirmDeleteVisible && (
+          <View pointerEvents="box-none" style={styles.confirmOverlayRoot}>
+            <Pressable
+              style={styles.fullscreenOverlay}
+              onPress={() => !deleteLoading && setConfirmDeleteVisible(false)}
+            >
+              <Pressable style={styles.confirmCard} onPress={() => {}}>
+                <Text style={styles.confirmTitle}>ანგარიშის წაშლა</Text>
+                <Text style={styles.confirmMsg}>
+                  დარწმუნებული ხართ? ეს ქმედება შეუქცევადია.
+                </Text>
+                <View style={styles.confirmActions}>
+                  <TouchableOpacity
+                    onPress={() => setConfirmDeleteVisible(false)}
+                    disabled={deleteLoading}
+                    style={styles.confirmBtn}
+                  >
+                    <Text style={styles.confirmBtnText}>გაუქმება</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={doDeleteAccount}
+                    disabled={deleteLoading}
+                    style={styles.confirmBtn}
+                  >
+                    {deleteLoading ? (
+                      <ActivityIndicator color="#ec4899" />
+                    ) : (
+                      <Text
+                        style={[styles.confirmBtnText, { fontWeight: "700" }]}
+                      >
+                        დიახ, წაშლა
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Pressable>
+          </View>
+        )}
+      </View>
     </Modal>
   );
 };
@@ -521,6 +641,63 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#f9a8d4" },
   rowLabel: { color: "#6b7280", marginBottom: 4 },
   rowValue: { color: "#111827", fontSize: 16 },
+
+  // Full-screen confirm overlay root: placed over the whole modal content
+  confirmOverlayRoot: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 1000,
+  },
+  fullscreenOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  confirmCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#f9a8d4",
+  },
+  confirmTitle: {
+    color: "#111827",
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  confirmMsg: {
+    color: "#374151",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  confirmActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  confirmBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#ec4899",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+  },
+  confirmBtnText: {
+    color: "#ec4899",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
 
 export default AccountModal;
